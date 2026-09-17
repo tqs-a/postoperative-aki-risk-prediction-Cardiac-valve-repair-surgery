@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Postoperative AKI Risk Calculator (10 predictors)</title>
-<meta name="description" content="Random-forest prediction of acute kidney injury after cardiac valve repair surgery from ten preoperative variables. Platt-calibrated; computed entirely in the browser.">
+<meta name="description" content="Random-forest prediction of acute kidney injury after cardiac valve repair surgery from ten preoperative variables. Platt-calibrated, with per-feature contributions and decision suggestions; computed entirely in the browser.">
 <style>
   :root{
     --paper:#f8f5ef;          /* warm off-white page */
@@ -17,6 +17,8 @@
     --primary-deep:#14497f;
     --low:#207a4a;            /* below threshold */
     --high:#bd3b2a;           /* above threshold */
+    --amber:#a97a1f;          /* low-intermediate */
+    --orange:#c2601e;         /* high-intermediate */
     --track:#e9e3d4;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -112,6 +114,36 @@
     font-size:10.5px;font-weight:700;color:var(--ink);white-space:nowrap;
   }
   .scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+
+  /* ---------- contributions ---------- */
+  .rail-section{margin-top:24px;border-top:1px solid var(--line-strong);padding-top:14px}
+  .rail-section h3{
+    font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  .legend{display:flex;gap:16px;font-size:11px;color:var(--ink-soft);margin-bottom:12px}
+  .legend .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+  .contrib-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .contrib-name{width:118px;flex:none;font-size:12px;line-height:1.25;text-align:right}
+  .contrib-val{display:block;font-size:10.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .contrib-track{flex:1;height:15px;background:#f0ebdf;position:relative;border-radius:3px;overflow:hidden}
+  .contrib-center{position:absolute;left:50%;top:0;bottom:0;width:1px;background:#b6ab93;z-index:2}
+  .contrib-bar-pos{position:absolute;left:50%;top:2px;bottom:2px;background:var(--high);border-radius:2px 0 0 2px;transition:width .3s}
+  .contrib-bar-neg{position:absolute;right:50%;top:2px;bottom:2px;background:var(--primary);border-radius:0 2px 2px 0;transition:width .3s}
+  .contrib-amt{width:52px;flex:none;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+  .contrib-amt.pos{color:var(--high)} .contrib-amt.neg{color:var(--primary)}
+
+  /* ---------- advice ---------- */
+  .advice{background:#eef3f9;border:1px solid #d3e0ee;border-radius:4px;padding:14px 16px}
+  .advice .risk-tag{
+    display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;
+    letter-spacing:.06em;text-transform:uppercase;color:#fff;margin-bottom:8px;
+  }
+  .advice p{font-size:12.5px;margin-bottom:6px;color:var(--ink)}
+  .advice p:last-child{margin-bottom:0}
+  .advice .drivers{font-size:12px;color:var(--ink-soft)}
+  .advice .up{color:var(--high);font-weight:650}
+  .advice .down{color:var(--primary);font-weight:650}
 
   .info{margin-top:22px;border-top:1px solid var(--line-strong);padding-top:4px}
   .info .row{
@@ -224,6 +256,18 @@
       <div class="thresh"><span class="thresh-label">Threshold 31%</span></div>
     </div>
     <div class="scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+
+    <div class="rail-section">
+      <h3>Feature contributions</h3>
+      <div class="legend"><span><span class="dot" style="background:#bd3b2a"></span>Increases risk</span><span><span class="dot" style="background:#1a5fb4"></span>Decreases risk</span></div>
+      <div id="contribs"></div>
+    </div>
+
+    <div class="rail-section">
+      <h3>Decision suggestion</h3>
+      <div class="advice" id="advice">—</div>
+    </div>
+
     <dl class="info">
       <div class="row"><dt>Model</dt><dd>Random forest · 500 trees · 10 predictors</dd></div>
       <div class="row"><dt>Discrimination</dt><dd>Internal test AUC = 0.784 · external AUC = 0.768</dd></div>
@@ -240,8 +284,6 @@
 <script src="model.part3.js"></script>
 <script src="model.part4.js"></script>
 <script src="model.part5.js"></script>
-<script src="model.part6.js"></script>
-<script src="model.part7.js"></script>
 <script>
 "use strict";
 let TREES = null;
@@ -256,31 +298,48 @@ async function decodeModel(b64){
   while (off < bytes.length) {
     const n = dv.getUint16(off, true); off += 2;
     const f = new Uint8Array(n), l = new Uint8Array(n), r = new Uint8Array(n);
-    const th = new Float32Array(n), p = new Float32Array(n);
+    const q = new Float64Array(n), th = new Float32Array(n);
     for (let i = 0; i < n; i++){ f[i]=bytes[off+i]; l[i]=bytes[off+n+i]; r[i]=bytes[off+2*n+i]; }
     off += 3*n;
-    for (let i = 0; i < n; i++){
-      if (f[i] === 255){ p[i] = dv.getUint16(off+4*i, true)/65535; }
-      else { th[i] = dv.getFloat32(off+4*i, true); }
-    }
+    for (let i = 0; i < n; i++){ q[i] = dv.getUint16(off+2*i, true)/65535; }
+    off += 2*n;
+    for (let i = 0; i < n; i++){ th[i] = dv.getFloat32(off+4*i, true); }
     off += 4*n;
-    trees.push({f, l, r, th, p});
+    trees.push({f, l, r, th, q});
   }
   return trees;
 }
 decodeModel(window.__AKI_PARTS.join("")).then(t => { TREES = t; calc(); });
 const A = 1.2242, B = -0.6124, YOUDEN = 30.8;
 
-function predict(vals) {
+function rawPredict(vals) {
   let s = 0;
   for (let k = 0; k < TREES.length; k++) {
     const t = TREES[k]; let node = 0;
     while (t.f[node] !== 255) { node = (Math.fround(vals[t.f[node]]) <= t.th[node]) ? t.l[node] : t.r[node]; }
-    s += t.p[node];
+    s += t.q[node];
   }
-  const p = Math.max(1e-6, Math.min(1 - 1e-6, s / TREES.length));
+  return Math.max(1e-6, Math.min(1 - 1e-6, s / TREES.length));
+}
+function predict(vals) {
+  const p = rawPredict(vals);
   const logit = Math.log(p / (1 - p));
   return 1 / (1 + Math.exp(-(A * logit + B)));
+}
+
+function contributions(vals) {
+  const n = F.length, contrib = new Array(n).fill(0);
+  for (let k = 0; k < TREES.length; k++) {
+    const t = TREES[k]; let node = 0;
+    while (t.f[node] !== 255) {
+      const f = t.f[node];
+      const child = (Math.fround(vals[f]) <= t.th[node]) ? t.l[node] : t.r[node];
+      contrib[f] += (t.q[child] - t.q[node]);
+      node = child;
+    }
+  }
+  for (let i = 0; i < n; i++) contrib[i] /= TREES.length;
+  return contrib;
 }
 
 const F = [
@@ -289,9 +348,56 @@ const F = [
   {id:'crea', dec:0, bin:false}, {id:'ggt', dec:0, bin:false}, {id:'tni', dec:3, bin:false},
   {id:'htn', dec:0, bin:true}
 ];
+const DEFAULTS = F.map(f => f.bin
+  ? document.querySelector('#'+f.id+'-bin .active').dataset.v
+  : document.getElementById(f.id).value);
+const FNAME = ['D-dimer','NT-proBNP','Age','Neutrophil count','Fibrinogen','Uric acid','Creatinine','γ-GT','hs-cTnI','Hypertension'];
 
 function readVals() {
   return F.map(f => f.bin ? +document.querySelector('#'+f.id+'-bin .active').dataset.v : +document.getElementById(f.id).value);
+}
+
+function fmtVal(id, v) {
+  const f = F.find(x => x.id === id);
+  return f.bin ? (v >= 0.5 ? 'Yes' : 'No') : v.toFixed(f.dec);
+}
+
+function renderContribs(contrib, vals) {
+  const scale = Math.max(0.05, ...contrib.map(x => Math.abs(x)));
+  const order = [...Array(F.length).keys()].sort((a,b) => Math.abs(contrib[b]) - Math.abs(contrib[a]));
+  const el = document.getElementById('contribs');
+  el.innerHTML = order.map(i => {
+    const c = contrib[i];
+    const half = Math.min(50, Math.abs(c) / scale * 50);
+    const bar = c >= 0
+      ? `<div class="contrib-bar-pos" style="width:${half}%"></div>`
+      : `<div class="contrib-bar-neg" style="width:${half}%"></div>`;
+    const cls = c >= 0 ? 'pos' : 'neg';
+    const sign = c >= 0 ? '+' : '−';
+    return `<div class="contrib-row">
+      <div class="contrib-name">${FNAME[i]}<span class="contrib-val">${fmtVal(F[i].id, vals[i])}</span></div>
+      <div class="contrib-track">${bar}<div class="contrib-center"></div></div>
+      <div class="contrib-amt ${cls}">${sign}${Math.abs(c*100).toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdvice(pct, contrib) {
+  const el = document.getElementById('advice');
+  const order = [...Array(F.length).keys()].sort((a,b) => contrib[b] - contrib[a]);
+  const up = order.filter(i => contrib[i] > 0.0005).slice(0, 3);
+  const down = order.filter(i => contrib[i] < -0.0005).sort((a,b) => contrib[a] - contrib[b]).slice(0, 2);
+  let cat, color, rec;
+  if (pct < 15) { cat='Low risk'; color='#207a4a'; rec='Routine perioperative monitoring is recommended; no specific intervention required.'; }
+  else if (pct < 31) { cat='Low-intermediate risk'; color='#a97a1f'; rec='Consider standard preventive measures (maintain euvolemia, avoid nephrotoxins, monitor urine output and creatinine).'; }
+  else if (pct < 50) { cat='High-intermediate risk'; color='#c2601e'; rec='Close hemodynamic and renal monitoring is advised; consider nephrology consultation and optimization of modifiable factors.'; }
+  else { cat='High risk'; color='#bd3b2a'; rec='High predicted risk. Implement aggressive preventive strategy, avoid nephrotoxic agents, and plan early postoperative renal surveillance.'; }
+  const upTxt = up.length ? up.map(i => `<span class="up">${FNAME[i]}</span>`).join(', ') : '<span>none</span>';
+  const downTxt = down.length ? down.map(i => `<span class="down">${FNAME[i]}</span>`).join(', ') : '<span>none</span>';
+  el.innerHTML = `<span class="risk-tag" style="background:${color}">${cat}</span>
+    <p>${rec}</p>
+    <p class="drivers">Main risk-increasing factors: ${upTxt}.</p>
+    <p class="drivers">Main risk-decreasing factors: ${downTxt}.</p>`;
 }
 
 function calc() {
@@ -310,6 +416,9 @@ function calc() {
     fill.style.background = '#bd3b2a'; numEl.style.color = '#bd3b2a';
   }
   fill.style.width = Math.min(100, pct) + '%';
+  const contrib = contributions(vals);
+  renderContribs(contrib, vals);
+  renderAdvice(pct, contrib);
 }
 
 function sync(id) {
@@ -331,13 +440,13 @@ F.forEach(f => {
 });
 
 document.getElementById('reset').addEventListener('click', () => {
-  F.forEach(f => {
+  F.forEach((f, idx) => {
     if (f.bin) {
       const btns = document.querySelectorAll('#'+f.id+'-bin .btn-b');
-      btns.forEach(b => { b.classList.toggle('active', b.dataset.v === '1'); });
+      btns.forEach(b => { b.classList.toggle('active', b.dataset.v === DEFAULTS[idx]); });
     } else {
       const rng = document.getElementById(f.id + '-range'); const num = document.getElementById(f.id);
-      num.value = rng.value; sync(f.id);
+      num.value = DEFAULTS[idx]; rng.value = parseFloat(DEFAULTS[idx]);
     }
   });
   calc();
