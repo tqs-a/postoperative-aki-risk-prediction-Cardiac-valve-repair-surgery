@@ -43,11 +43,14 @@
   header.top .sub{margin-top:10px;font-size:14px;color:var(--ink-soft);max-width:75ch}
 
   /* ---------- layout ---------- */
+  .wrap{max-width:1120px;margin:30px auto 0}
   .layout{
-    max-width:1120px;margin:30px auto 0;
     display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:34px;align-items:start;
   }
-  @media (max-width:920px){.layout{grid-template-columns:1fr}}
+  .modules{
+    display:grid;grid-template-columns:1.2fr 1fr;gap:34px;align-items:start;margin-top:34px;
+  }
+  @media (max-width:920px){.layout,.modules{grid-template-columns:1fr}}
 
   .panel{background:var(--card);border:1px solid var(--line);padding:26px 26px 22px}
   .panel-head{
@@ -118,15 +121,10 @@
   .scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
 
   /* ---------- contributions ---------- */
-  .rail-section{margin-top:24px;border-top:1px solid var(--line-strong);padding-top:14px}
-  .rail-section h3{
-    font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
-    margin-bottom:10px;
-  }
-  .legend{display:flex;gap:16px;font-size:11px;color:var(--ink-soft);margin-bottom:12px}
+  .legend{display:flex;gap:16px;font-size:11px;color:var(--ink-soft);margin:12px 0 12px}
   .legend .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
   .contrib-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .contrib-name{width:118px;flex:none;font-size:12px;line-height:1.25;text-align:right}
+  .contrib-name{width:132px;flex:none;font-size:12px;line-height:1.25;text-align:right}
   .contrib-val{display:block;font-size:10.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
   .contrib-track{flex:1;height:15px;background:#f0ebdf;position:relative;border-radius:3px;overflow:hidden}
   .contrib-center{position:absolute;left:50%;top:0;bottom:0;width:1px;background:#b6ab93;z-index:2}
@@ -136,7 +134,7 @@
   .contrib-amt.pos{color:var(--high)} .contrib-amt.neg{color:var(--primary)}
 
   /* ---------- advice ---------- */
-  .advice{background:#eef3f9;border:1px solid #d3e0ee;border-radius:4px;padding:14px 16px}
+  .advice{background:#eef3f9;border:1px solid #d3e0ee;border-radius:4px;padding:14px 16px;margin-top:12px}
   .advice .risk-tag{
     display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;
     letter-spacing:.06em;text-transform:uppercase;color:#fff;margin-bottom:8px;
@@ -169,115 +167,119 @@
   <p class="sub">Cardiac valve repair surgery &middot; Random forest model (500 trees, 10 predictors, Platt-calibrated). All computation runs locally in your browser — no data are transmitted or stored.</p>
 </header>
 
-<main class="layout">
-  <section class="panel" aria-label="Patient variables">
-    <div class="panel-head">
-      <h2>Patient variables</h2>
-      <button id="reset" type="button">Reset to defaults</button>
-    </div>
-    <div class="fields">
-      <div class="field">
-        <div class="label-row"><label for="age">Age</label><span class="unit">years</span></div>
-        <div class="input-row">
-          <input type="range" id="age-range" min="18" max="95" step="1" value="56">
-          <input type="number" id="age" min="18" max="95" step="1" value="56">
+<main class="wrap">
+  <div class="layout">
+    <section class="panel" aria-label="Patient variables">
+      <div class="panel-head">
+        <h2>Patient variables</h2>
+        <button id="reset" type="button">Reset to defaults</button>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <div class="label-row"><label for="age">Age</label><span class="unit">years</span></div>
+          <div class="input-row">
+            <input type="range" id="age-range" min="18" max="95" step="1" value="56">
+            <input type="number" id="age" min="18" max="95" step="1" value="56">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label>Hypertension</label><span class="unit">history</span></div>
+          <div class="binary" id="htn-bin" role="group" aria-label="Hypertension">
+            <button type="button" class="btn-b" data-v="0">No</button>
+            <button type="button" class="btn-b active" data-v="1">Yes</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="neu">Neutrophil count</label><span class="unit">×10⁹/L</span></div>
+          <div class="input-row">
+            <input type="range" id="neu-range" min="0.1" max="30" step="0.1" value="3.8">
+            <input type="number" id="neu" min="0.1" max="30" step="0.1" value="3.8">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="ddimer">D-dimer</label><span class="unit">µg/mL</span></div>
+          <div class="input-row">
+            <input type="range" id="ddimer-range" min="0" max="20" step="0.01" value="0.23">
+            <input type="number" id="ddimer" min="0" max="20" step="0.01" value="0.23">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="fib">Fibrinogen</label><span class="unit">g/L</span></div>
+          <div class="input-row">
+            <input type="range" id="fib-range" min="0.5" max="10" step="0.01" value="2.72">
+            <input type="number" id="fib" min="0.5" max="10" step="0.01" value="2.72">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="ntprobnp">NT-proBNP</label><span class="unit">pg/mL</span></div>
+          <div class="input-row">
+            <input type="range" id="ntprobnp-range" min="0" max="10000" step="10" value="250">
+            <input type="number" id="ntprobnp" min="0" max="10000" step="10" value="250">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="tni">High-sensitivity cardiac troponin I (hs-cTnI)</label><span class="unit">ng/mL</span></div>
+          <div class="input-row">
+            <input type="range" id="tni-range" min="0" max="5" step="0.001" value="0.01">
+            <input type="number" id="tni" min="0" max="5" step="0.001" value="0.01">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="ggt">γ-Glutamyl transferase (γ-GT)</label><span class="unit">U/L</span></div>
+          <div class="input-row">
+            <input type="range" id="ggt-range" min="0" max="500" step="1" value="22">
+            <input type="number" id="ggt" min="0" max="500" step="1" value="22">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="uric">Uric acid</label><span class="unit">µmol/L</span></div>
+          <div class="input-row">
+            <input type="range" id="uric-range" min="100" max="1000" step="1" value="349">
+            <input type="number" id="uric" min="100" max="1000" step="1" value="349">
+          </div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="crea">Creatinine</label><span class="unit">µmol/L</span></div>
+          <div class="input-row">
+            <input type="range" id="crea-range" min="20" max="1000" step="1" value="73">
+            <input type="number" id="crea" min="20" max="1000" step="1" value="73">
+          </div>
         </div>
       </div>
-      <div class="field">
-        <div class="label-row"><label>Hypertension</label><span class="unit">history</span></div>
-        <div class="binary" id="htn-bin" role="group" aria-label="Hypertension">
-          <button type="button" class="btn-b" data-v="0">No</button>
-          <button type="button" class="btn-b active" data-v="1">Yes</button>
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="neu">Neutrophil count</label><span class="unit">×10⁹/L</span></div>
-        <div class="input-row">
-          <input type="range" id="neu-range" min="0.1" max="30" step="0.1" value="3.8">
-          <input type="number" id="neu" min="0.1" max="30" step="0.1" value="3.8">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="ddimer">D-dimer</label><span class="unit">µg/mL</span></div>
-        <div class="input-row">
-          <input type="range" id="ddimer-range" min="0" max="20" step="0.01" value="0.23">
-          <input type="number" id="ddimer" min="0" max="20" step="0.01" value="0.23">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="fib">Fibrinogen</label><span class="unit">g/L</span></div>
-        <div class="input-row">
-          <input type="range" id="fib-range" min="0.5" max="10" step="0.01" value="2.72">
-          <input type="number" id="fib" min="0.5" max="10" step="0.01" value="2.72">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="ntprobnp">NT-proBNP</label><span class="unit">pg/mL</span></div>
-        <div class="input-row">
-          <input type="range" id="ntprobnp-range" min="0" max="10000" step="10" value="250">
-          <input type="number" id="ntprobnp" min="0" max="10000" step="10" value="250">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="tni">High-sensitivity cardiac troponin I (hs-cTnI)</label><span class="unit">ng/mL</span></div>
-        <div class="input-row">
-          <input type="range" id="tni-range" min="0" max="5" step="0.001" value="0.01">
-          <input type="number" id="tni" min="0" max="5" step="0.001" value="0.01">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="ggt">γ-Glutamyl transferase (γ-GT)</label><span class="unit">U/L</span></div>
-        <div class="input-row">
-          <input type="range" id="ggt-range" min="0" max="500" step="1" value="22">
-          <input type="number" id="ggt" min="0" max="500" step="1" value="22">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="uric">Uric acid</label><span class="unit">µmol/L</span></div>
-        <div class="input-row">
-          <input type="range" id="uric-range" min="100" max="1000" step="1" value="349">
-          <input type="number" id="uric" min="100" max="1000" step="1" value="349">
-        </div>
-      </div>
-      <div class="field">
-        <div class="label-row"><label for="crea">Creatinine</label><span class="unit">µmol/L</span></div>
-        <div class="input-row">
-          <input type="range" id="crea-range" min="20" max="1000" step="1" value="73">
-          <input type="number" id="crea" min="20" max="1000" step="1" value="73">
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <aside class="panel result" aria-label="Predicted risk">
-    <h2>Predicted risk of postoperative AKI</h2>
-    <div class="risk-line"><span id="risk-val">—</span><span class="pct">%</span></div>
-    <span class="badge low" id="risk-badge">—</span>
-    <div class="gauge" aria-hidden="true">
-      <div class="fill" id="gauge-fill"></div>
-      <div class="zone-line" style="left:20%"><span class="zone-label">20%</span></div>
-      <div class="zone-line" style="left:40%"><span class="zone-label">40%</span></div>
-    </div>
-    <div class="scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+    <aside class="panel result" aria-label="Predicted risk">
+      <h2>Predicted risk of postoperative AKI</h2>
+      <div class="risk-line"><span id="risk-val">—</span><span class="pct">%</span></div>
+      <span class="badge low" id="risk-badge">—</span>
+      <div class="gauge" aria-hidden="true">
+        <div class="fill" id="gauge-fill"></div>
+        <div class="zone-line" style="left:20%"><span class="zone-label">20%</span></div>
+        <div class="zone-line" style="left:40%"><span class="zone-label">40%</span></div>
+      </div>
+      <div class="scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
 
-    <div class="rail-section">
-      <h3>Feature contributions</h3>
+      <dl class="info">
+        <div class="row"><dt>Model</dt><dd>Random forest · 500 trees · 10 predictors</dd></div>
+        <div class="row"><dt>Discrimination</dt><dd>Internal test AUC = 0.784 · external AUC = 0.768</dd></div>
+        <div class="row"><dt>Platt calibration</dt><dd>a = 1.2242 · b = −0.6124</dd></div>
+        <div class="row"><dt>Risk stratification</dt><dd>Low &lt;20% · Intermediate 20–40% · High &gt;40%</dd></div>
+      </dl>
+    </aside>
+  </div>
+
+  <div class="modules">
+    <section class="panel" aria-label="Feature contributions">
+      <div class="panel-head"><h2>Feature contributions</h2></div>
       <div class="legend"><span><span class="dot" style="background:#bd3b2a"></span>Increases risk</span><span><span class="dot" style="background:#1a5fb4"></span>Decreases risk</span></div>
       <div id="contribs"></div>
-    </div>
+    </section>
 
-    <div class="rail-section">
-      <h3>Individualized decision suggestion</h3>
+    <section class="panel" aria-label="Individualized decision suggestion">
+      <div class="panel-head"><h2>Individualized decision suggestion</h2></div>
       <div class="advice" id="advice">—</div>
-    </div>
-
-    <dl class="info">
-      <div class="row"><dt>Model</dt><dd>Random forest · 500 trees · 10 predictors</dd></div>
-      <div class="row"><dt>Discrimination</dt><dd>Internal test AUC = 0.784 · external AUC = 0.768</dd></div>
-      <div class="row"><dt>Platt calibration</dt><dd>a = 1.2242 · b = −0.6124</dd></div>
-      <div class="row"><dt>Risk stratification</dt><dd>Low &lt;20% · Intermediate 20–40% · High &gt;40%</dd></div>
-    </dl>
-  </aside>
+    </section>
+  </div>
 </main>
 
 <footer>For research and educational use only. Not intended to replace clinical judgment.</footer>
