@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Postoperative AKI Risk Calculator (10 predictors)</title>
-<meta name="description" content="Random-forest prediction of acute kidney injury after cardiac valve repair surgery from ten preoperative variables. Platt-calibrated, with per-feature contributions and decision suggestions; computed entirely in the browser.">
+<meta name="description" content="Random-forest prediction of acute kidney injury after cardiac valve repair surgery from ten preoperative variables. Platt-calibrated, three-tier risk stratification with per-feature contributions and individualized decision suggestions; computed entirely in the browser.">
 <style>
   :root{
     --paper:#f8f5ef;          /* warm off-white page */
@@ -15,10 +15,9 @@
     --line-strong:#c9c0aa;
     --primary:#1a5fb4;        /* clinical blue (model identity) */
     --primary-deep:#14497f;
-    --low:#207a4a;            /* below threshold */
-    --high:#bd3b2a;           /* above threshold */
-    --amber:#a97a1f;          /* low-intermediate */
-    --orange:#c2601e;         /* high-intermediate */
+    --low:#207a4a;            /* low risk */
+    --mid:#a97a1f;            /* intermediate risk */
+    --high:#bd3b2a;           /* high risk */
     --track:#e9e3d4;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -104,13 +103,16 @@
     display:inline-block;margin:10px 0 2px;padding:5px 14px;border-radius:999px;
     font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#fff;
   }
-  .badge.low{background:var(--low)} .badge.high{background:var(--high)}
+  .badge.low{background:var(--low)} .badge.mid{background:var(--mid)} .badge.high{background:var(--high)}
 
-  .gauge{height:14px;border-radius:3px;background:var(--track);position:relative;margin:30px 0 7px;overflow:visible}
+  .gauge{
+    height:14px;border-radius:3px;position:relative;margin:30px 0 7px;overflow:visible;
+    background:linear-gradient(to right,#cfe0d3 0%,#cfe0d3 20%,#efe3c2 20%,#efe3c2 40%,#f0d3ca 40%,#f0d3ca 100%);
+  }
   .gauge .fill{height:100%;border-radius:3px;width:0%;transition:width .45s cubic-bezier(.22,.8,.3,1),background .25s}
-  .gauge .thresh{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--ink);left:30.8%}
-  .gauge .thresh-label{
-    position:absolute;top:-23px;left:30.8%;transform:translateX(-50%);
+  .gauge .zone-line{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--ink)}
+  .gauge .zone-label{
+    position:absolute;top:-23px;left:0;transform:translateX(-50%);
     font-size:10.5px;font-weight:700;color:var(--ink);white-space:nowrap;
   }
   .scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
@@ -139,11 +141,11 @@
     display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:800;
     letter-spacing:.06em;text-transform:uppercase;color:#fff;margin-bottom:8px;
   }
-  .advice p{font-size:12.5px;margin-bottom:6px;color:var(--ink)}
-  .advice p:last-child{margin-bottom:0}
-  .advice .drivers{font-size:12px;color:var(--ink-soft)}
-  .advice .up{color:var(--high);font-weight:650}
-  .advice .down{color:var(--primary);font-weight:650}
+  .advice .lead{font-size:12px;color:var(--ink-soft);margin-bottom:6px}
+  .advice ul{margin:2px 0 0 2px;padding-left:18px}
+  .advice li{font-size:12.5px;margin-bottom:6px;color:var(--ink)}
+  .advice li:last-child{margin-bottom:0}
+  .advice .fname{color:var(--high);font-weight:700}
 
   .info{margin-top:22px;border-top:1px solid var(--line-strong);padding-top:4px}
   .info .row{
@@ -171,7 +173,7 @@
   <section class="panel" aria-label="Patient variables">
     <div class="panel-head">
       <h2>Patient variables</h2>
-      <button id="reset" type="button">Reset to median</button>
+      <button id="reset" type="button">Reset to defaults</button>
     </div>
     <div class="fields">
       <div class="field">
@@ -253,7 +255,8 @@
     <span class="badge low" id="risk-badge">—</span>
     <div class="gauge" aria-hidden="true">
       <div class="fill" id="gauge-fill"></div>
-      <div class="thresh"><span class="thresh-label">Threshold 31%</span></div>
+      <div class="zone-line" style="left:20%"><span class="zone-label">20%</span></div>
+      <div class="zone-line" style="left:40%"><span class="zone-label">40%</span></div>
     </div>
     <div class="scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
 
@@ -264,7 +267,7 @@
     </div>
 
     <div class="rail-section">
-      <h3>Decision suggestion</h3>
+      <h3>Individualized decision suggestion</h3>
       <div class="advice" id="advice">—</div>
     </div>
 
@@ -272,12 +275,13 @@
       <div class="row"><dt>Model</dt><dd>Random forest · 500 trees · 10 predictors</dd></div>
       <div class="row"><dt>Discrimination</dt><dd>Internal test AUC = 0.784 · external AUC = 0.768</dd></div>
       <div class="row"><dt>Platt calibration</dt><dd>a = 1.2242 · b = −0.6124</dd></div>
-      <div class="row"><dt>Optimal threshold</dt><dd>31% (balancing sensitivity and specificity)</dd></div>
+      <div class="row"><dt>Risk stratification</dt><dd>Low &lt;20% · Intermediate 20–40% · High &gt;40%</dd></div>
     </dl>
   </aside>
 </main>
 
 <footer>For research and educational use only. Not intended to replace clinical judgment.</footer>
+
 
 <script src="model.part1.js"></script>
 <script src="model.part2.js"></script>
@@ -310,14 +314,16 @@ async function decodeModel(b64){
   return trees;
 }
 decodeModel(window.__AKI_PARTS.join("")).then(t => { TREES = t; calc(); });
-const A = 1.2242, B = -0.6124, YOUDEN = 30.8;
+function qv(t, i){ return t.q[i]; }
+
+const A = 1.2242, B = -0.6124, TIER1 = 20, TIER2 = 40;
 
 function rawPredict(vals) {
   let s = 0;
   for (let k = 0; k < TREES.length; k++) {
     const t = TREES[k]; let node = 0;
     while (t.f[node] !== 255) { node = (Math.fround(vals[t.f[node]]) <= t.th[node]) ? t.l[node] : t.r[node]; }
-    s += t.q[node];
+    s += qv(t, node);
   }
   return Math.max(1e-6, Math.min(1 - 1e-6, s / TREES.length));
 }
@@ -329,17 +335,20 @@ function predict(vals) {
 
 function contributions(vals) {
   const n = F.length, contrib = new Array(n).fill(0);
+  let bias = 0;
   for (let k = 0; k < TREES.length; k++) {
     const t = TREES[k]; let node = 0;
+    bias += qv(t, 0);
     while (t.f[node] !== 255) {
       const f = t.f[node];
       const child = (Math.fround(vals[f]) <= t.th[node]) ? t.l[node] : t.r[node];
-      contrib[f] += (t.q[child] - t.q[node]);
+      contrib[f] += (qv(t, child) - qv(t, node));
       node = child;
     }
   }
+  bias /= TREES.length;
   for (let i = 0; i < n; i++) contrib[i] /= TREES.length;
-  return contrib;
+  return { bias, contrib };
 }
 
 const F = [
@@ -352,6 +361,20 @@ const DEFAULTS = F.map(f => f.bin
   ? document.querySelector('#'+f.id+'-bin .active').dataset.v
   : document.getElementById(f.id).value);
 const FNAME = ['D-dimer','NT-proBNP','Age','Neutrophil count','Fibrinogen','Uric acid','Creatinine','γ-GT','hs-cTnI','Hypertension'];
+
+// Targeted advice for each predictor when it is a major risk-contributing factor
+const FEATURE_ADVICE = {
+  'D-dimer': 'Elevated D-dimer suggests activation of coagulation and fibrinolysis; assess thrombotic risk, evaluate the anticoagulation regimen, and screen for deep vein thrombosis when indicated.',
+  'NT-proBNP': 'Elevated NT-proBNP indicates increased cardiac load; optimize volume management, monitor cardiac function, and adjust heart failure therapy as needed.',
+  'Age': 'For older patients, enhanced comprehensive perioperative assessment and monitoring is recommended.',
+  'Neutrophil count': 'Elevated neutrophil count suggests inflammation or infection; evaluate the patient\'s inflammatory status, intensify anti-inflammatory and anti-infective management, and adjust or escalate antibiotic therapy when necessary.',
+  'Fibrinogen': 'Elevated fibrinogen suggests an inflammatory or hypercoagulable state; monitor coagulation and inflammatory markers.',
+  'Uric acid': 'Elevated uric acid indicates increased metabolic and renal burden; monitor renal function and avoid nephrotoxic agents.',
+  'Creatinine': 'Elevated creatinine suggests impaired baseline renal function; strengthen renal protection, use nephrotoxic drugs with caution, and monitor creatinine and urine output.',
+  'γ-GT': 'Elevated γ-GT suggests hepatobiliary burden or hepatic congestion; monitor liver function.',
+  'hs-cTnI': 'Elevated high-sensitivity cardiac troponin I indicates myocardial injury; assess the myocardial oxygen supply–demand balance and prioritize myocardial protection.',
+  'Hypertension': 'For patients with hypertension, optimize perioperative blood pressure management and maintain hemodynamic stability.'
+};
 
 function readVals() {
   return F.map(f => f.bin ? +document.querySelector('#'+f.id+'-bin .active').dataset.v : +document.getElementById(f.id).value);
@@ -384,20 +407,19 @@ function renderContribs(contrib, vals) {
 
 function renderAdvice(pct, contrib) {
   const el = document.getElementById('advice');
+  const tier = pct < TIER1 ? 'low' : (pct < TIER2 ? 'mid' : 'high');
+  const tierName = {low:'Low risk', mid:'Intermediate risk', high:'High risk'}[tier];
+  const tierColor = {low:'#207a4a', mid:'#a97a1f', high:'#bd3b2a'}[tier];
+  // Top 3 risk-increasing factors (positive contributions, descending)
   const order = [...Array(F.length).keys()].sort((a,b) => contrib[b] - contrib[a]);
   const up = order.filter(i => contrib[i] > 0.0005).slice(0, 3);
-  const down = order.filter(i => contrib[i] < -0.0005).sort((a,b) => contrib[a] - contrib[b]).slice(0, 2);
-  let cat, color, rec;
-  if (pct < 15) { cat='Low risk'; color='#207a4a'; rec='Routine perioperative monitoring is recommended; no specific intervention required.'; }
-  else if (pct < 31) { cat='Low-intermediate risk'; color='#a97a1f'; rec='Consider standard preventive measures (maintain euvolemia, avoid nephrotoxins, monitor urine output and creatinine).'; }
-  else if (pct < 50) { cat='High-intermediate risk'; color='#c2601e'; rec='Close hemodynamic and renal monitoring is advised; consider nephrology consultation and optimization of modifiable factors.'; }
-  else { cat='High risk'; color='#bd3b2a'; rec='High predicted risk. Implement aggressive preventive strategy, avoid nephrotoxic agents, and plan early postoperative renal surveillance.'; }
-  const upTxt = up.length ? up.map(i => `<span class="up">${FNAME[i]}</span>`).join(', ') : '<span>none</span>';
-  const downTxt = down.length ? down.map(i => `<span class="down">${FNAME[i]}</span>`).join(', ') : '<span>none</span>';
-  el.innerHTML = `<span class="risk-tag" style="background:${color}">${cat}</span>
-    <p>${rec}</p>
-    <p class="drivers">Main risk-increasing factors: ${upTxt}.</p>
-    <p class="drivers">Main risk-decreasing factors: ${downTxt}.</p>`;
+  let html = `<span class="risk-tag" style="background:${tierColor}">${tierName}</span>`;
+  if (up.length) {
+    html += '<div class="lead">Main risk-contributing factors and targeted recommendations:</div><ul>';
+    up.forEach(i => { html += `<li><span class="fname">${FNAME[i]}</span>: ${FEATURE_ADVICE[FNAME[i]]}</li>`; });
+    html += '</ul>';
+  }
+  el.innerHTML = html;
 }
 
 function calc() {
@@ -408,15 +430,19 @@ function calc() {
   numEl.textContent = pct.toFixed(1);
   const badge = document.getElementById('risk-badge');
   const fill = document.getElementById('gauge-fill');
-  if (pct < YOUDEN) {
-    badge.textContent = 'Low risk — below threshold'; badge.className = 'badge low';
+  const tier = pct < TIER1 ? 'low' : (pct < TIER2 ? 'mid' : 'high');
+  if (tier === 'low') {
+    badge.textContent = 'Low risk'; badge.className = 'badge low';
     fill.style.background = '#207a4a'; numEl.style.color = '#207a4a';
+  } else if (tier === 'mid') {
+    badge.textContent = 'Intermediate risk'; badge.className = 'badge mid';
+    fill.style.background = '#a97a1f'; numEl.style.color = '#a97a1f';
   } else {
-    badge.textContent = 'High risk — above threshold'; badge.className = 'badge high';
+    badge.textContent = 'High risk'; badge.className = 'badge high';
     fill.style.background = '#bd3b2a'; numEl.style.color = '#bd3b2a';
   }
   fill.style.width = Math.min(100, pct) + '%';
-  const contrib = contributions(vals);
+  const { contrib } = contributions(vals);
   renderContribs(contrib, vals);
   renderAdvice(pct, contrib);
 }
@@ -453,6 +479,7 @@ document.getElementById('reset').addEventListener('click', () => {
 });
 
 calc();
+
 </script>
 </body>
 </html>
