@@ -9,7 +9,7 @@ Browser-based random-forest calculator for predicting **acute kidney injury (AKI
 - Random forest, 500 trees, 10 predictors
 - Platt-calibrated probabilities (a = 1.2242, b = −0.6124)
 - Internal test AUC = 0.784 · external AUC = 0.768
-- Optimal decision threshold: 31% (balancing sensitivity and specificity)
+- Three-tier risk stratification: low (<20%) / intermediate (20–40%) / high (>40%)
 
 ## Predictors
 
@@ -17,10 +17,10 @@ Age, hypertension history, neutrophil count, D-dimer, fibrinogen, NT-proBNP, hig
 
 ## Features
 
-- Predicted AKI probability with color-coded gauge and 31% decision threshold marker
+- Predicted AKI probability with a three-zone color-coded gauge (20% / 40% tier boundaries)
 - **Feature contributions** — per-predictor Saabas-style path contributions showing which variables raise (red) or lower (blue) the estimate for the current patient
-- **Decision suggestion** — risk-stratified recommendation (Low / Low-intermediate / High-intermediate / High) listing the main risk-increasing and risk-decreasing factors
-- Reset-to-median button restoring the reference patient values
+- **Individualized decision suggestion** — risk tier plus targeted clinical recommendations for the top risk-contributing factors (e.g., anticoagulation assessment for elevated D-dimer, volume management for elevated NT-proBNP)
+- Reset-to-defaults button restoring the reference patient values
 
 ## Implementation
 
